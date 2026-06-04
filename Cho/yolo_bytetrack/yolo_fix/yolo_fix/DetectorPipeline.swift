@@ -11,7 +11,7 @@ struct DetectorPipelineConfiguration {
     var confidenceThreshold: Float = 0.40
     var nmsIoUThreshold: CGFloat = 0.45
     var classNames: [String] = ["person"]
-    var rawModelClassCount: Int? = 80
+    var rawModelClassCount: Int? = 1
     var sourceClassMap: [Int: Int] = [0: 0]
 
     static let current640 = DetectorPipelineConfiguration()
@@ -25,9 +25,9 @@ struct DetectorPipelineConfiguration {
         inputWidth: 1024,
         inputHeight: 576,
         confidenceThreshold: 0.10,
-        classNames: ["person", "ball"],
-        rawModelClassCount: 80,
-        sourceClassMap: [0: 0, 32: 1]
+        classNames: ["person"],
+        rawModelClassCount: 1,
+        sourceClassMap: [0: 0]
     )
 }
 

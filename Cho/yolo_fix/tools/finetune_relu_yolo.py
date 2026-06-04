@@ -34,6 +34,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lrf", type=float, default=0.01, help="Final learning rate fraction.")
     parser.add_argument("--patience", type=int, default=20, help="Early-stopping patience.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument("--mosaic", type=float, default=1.0, help="Mosaic augmentation probability.")
+    parser.add_argument("--scale", type=float, default=0.5, help="Image scale augmentation factor.")
+    parser.add_argument("--close-mosaic", type=int, default=10, help="Disable mosaic for the last N epochs.")
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -74,10 +77,16 @@ def replace_silu_with_relu(model) -> int:
 
 def train(args: argparse.Namespace) -> None:
     from ultralytics import YOLO
+    from ultralytics.models.yolo.detect import DetectionTrainer
 
     model = YOLO(args.weights)
-    replacements = replace_silu_with_relu(model.model)
-    print(f"activation override: replaced {replacements} SiLU modules with ReLU")
+
+    class ReLUDetectionTrainer(DetectionTrainer):
+        def get_model(self, cfg=None, weights=None, verbose=True):
+            train_model = super().get_model(cfg=cfg, weights=weights, verbose=verbose)
+            replacements = replace_silu_with_relu(train_model)
+            print(f"activation override: replaced {replacements} SiLU modules with ReLU")
+            return train_model
 
     train_kwargs = {
         "data": args.data,
@@ -92,10 +101,12 @@ def train(args: argparse.Namespace) -> None:
         "lrf": args.lrf,
         "patience": args.patience,
         "seed": args.seed,
-        "pretrained": False,
+        "pretrained": True,
         "rect": not args.no_rect,
         "cos_lr": True,
-        "close_mosaic": 10,
+        "mosaic": args.mosaic,
+        "scale": args.scale,
+        "close_mosaic": args.close_mosaic,
         "save": True,
         "plots": True,
         "resume": args.resume,
@@ -104,7 +115,7 @@ def train(args: argparse.Namespace) -> None:
     if args.freeze is not None:
         train_kwargs["freeze"] = args.freeze
 
-    results = model.train(**train_kwargs)
+    results = model.train(trainer=ReLUDetectionTrainer, **train_kwargs)
     trainer = getattr(model, "trainer", None)
     save_dir = Path(
         getattr(

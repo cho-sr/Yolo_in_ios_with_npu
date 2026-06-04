@@ -1,0 +1,34 @@
+model: yolo26n_relu_person_mixed_b8
+weights: trained_models/yolo26n_relu_person_mixed_b8_best.pt
+base_weights: yolo26n.pt
+task: detect
+classes:
+  - person
+activation_override: relu
+activation_replacements: 105
+training:
+  script: Cho/yolo_fix/tools/finetune_relu_yolo.py
+  data: datasets/person-football-mixed/data.yaml
+  epochs: 50
+  batch: 8
+  imgsz: 1024
+  device: cuda:0
+  workers: 0
+  mosaic: 1.0
+  scale: 0.5
+  close_mosaic: 10
+  source_run: runs/relu_finetune/yolo26n_relu_person_mixed_b8
+metrics:
+  final_epoch: 50
+  precision_b: 0.75791
+  recall_b: 0.67254
+  map50_b: 0.72815
+  map50_95_b: 0.4539
+dataset:
+  mixed_train_images: 2722
+  mixed_train_boxes: 15549
+  mixed_val_images: 318
+  mixed_val_boxes: 2156
+  sources:
+    - COCO val2017 person subset
+    - martinjolif/football-player-detection remapped to person

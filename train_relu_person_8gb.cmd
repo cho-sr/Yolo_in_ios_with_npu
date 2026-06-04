@@ -13,4 +13,4 @@ python Cho\yolo_fix\tools\finetune_relu_yolo.py ^
   --imgsz 1024 ^
   --device 0 ^
   --workers 0 ^
-  --name yolo26n_relu_player_b2
+  --name yolo26n_relu_person_b2
