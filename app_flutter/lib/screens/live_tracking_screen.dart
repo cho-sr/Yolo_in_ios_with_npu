@@ -71,7 +71,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
               ),
             ),
           ),
-          const Positioned.fill(child: DetectionOverlay()),
+          Positioned.fill(
+            child: DetectionOverlay(
+              detections: _detectorStatus.detections,
+              showFallback: false,
+            ),
+          ),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {

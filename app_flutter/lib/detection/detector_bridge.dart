@@ -1,5 +1,40 @@
 import 'package:flutter/services.dart';
 
+class DetectionBoxData {
+  const DetectionBoxData({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.label,
+    required this.confidence,
+    required this.classId,
+    this.locked = false,
+  });
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final String label;
+  final double confidence;
+  final int classId;
+  final bool locked;
+
+  factory DetectionBoxData.fromMap(Map<Object?, Object?> map) {
+    return DetectionBoxData(
+      x: (map['x'] as num?)?.toDouble() ?? 0,
+      y: (map['y'] as num?)?.toDouble() ?? 0,
+      width: (map['width'] as num?)?.toDouble() ?? 0,
+      height: (map['height'] as num?)?.toDouble() ?? 0,
+      label: (map['label'] as String?) ?? 'object',
+      confidence: (map['confidence'] as num?)?.toDouble() ?? 0,
+      classId: (map['classId'] as num?)?.toInt() ?? -1,
+      locked: map['locked'] == true,
+    );
+  }
+}
+
 class DetectorStatus {
   const DetectorStatus({
     required this.ok,
@@ -11,6 +46,8 @@ class DetectorStatus {
     this.inferenceMs,
     this.outputCount,
     this.modelSizeBytes,
+    this.detections = const [],
+    this.detectionsSource,
     this.error,
   });
 
@@ -23,9 +60,12 @@ class DetectorStatus {
   final double? inferenceMs;
   final int? outputCount;
   final int? modelSizeBytes;
+  final List<DetectionBoxData> detections;
+  final String? detectionsSource;
   final String? error;
 
   bool get modelReady => nativeAvailable && modelPresent;
+  bool get hasDetections => detections.isNotEmpty;
 
   String get shortLabel {
     if (!nativeAvailable) return 'Native: OFF';
@@ -35,6 +75,14 @@ class DetectorStatus {
   }
 
   factory DetectorStatus.fromMap(Map<Object?, Object?> map) {
+    final rawDetections = map['detections'];
+    final detections = rawDetections is List
+        ? rawDetections
+            .whereType<Map<Object?, Object?>>()
+            .map(DetectionBoxData.fromMap)
+            .toList(growable: false)
+        : const <DetectionBoxData>[];
+
     return DetectorStatus(
       ok: map['ok'] == true,
       nativeAvailable: true,
@@ -45,6 +93,8 @@ class DetectorStatus {
       inferenceMs: (map['inferenceMs'] as num?)?.toDouble(),
       outputCount: (map['outputCount'] as num?)?.toInt(),
       modelSizeBytes: (map['modelSizeBytes'] as num?)?.toInt(),
+      detections: detections,
+      detectionsSource: map['detectionsSource'] as String?,
     );
   }
 
@@ -64,15 +114,37 @@ class DetectorBridge {
   static const MethodChannel _channel = MethodChannel('pocket_coach/detector');
 
   Future<DetectorStatus> startLiveSession() => _invoke('startLiveSession');
+  Future<DetectorStatus> detectFrame({
+    required Uint8List bytes,
+    required int width,
+    required int height,
+    required int bytesPerRow,
+    required int timestampMicros,
+  }) {
+    return _invoke(
+      'detectFrame',
+      {
+        'bytes': bytes,
+        'width': width,
+        'height': height,
+        'bytesPerRow': bytesPerRow,
+        'timestampMicros': timestampMicros,
+      },
+    );
+  }
+
   Future<DetectorStatus> stopLiveSession() => _invoke('stopLiveSession');
   Future<DetectorStatus> lockTarget() => _invoke('lockTarget');
   Future<DetectorStatus> runCalibration() => _invoke('runCalibration');
   Future<DetectorStatus> servoTest() => _invoke('servoTest');
   Future<DetectorStatus> getDetectorStatus() => _invoke('getDetectorStatus');
 
-  Future<DetectorStatus> _invoke(String method) async {
+  Future<DetectorStatus> _invoke(
+    String method, [
+    Object? arguments,
+  ]) async {
     try {
-      final payload = await _channel.invokeMethod<Object?>(method);
+      final payload = await _channel.invokeMethod<Object?>(method, arguments);
       if (payload is Map<Object?, Object?>) {
         return DetectorStatus.fromMap(payload);
       }

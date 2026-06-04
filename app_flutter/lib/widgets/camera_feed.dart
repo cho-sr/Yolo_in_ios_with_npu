@@ -1,18 +1,44 @@
+import 'dart:typed_data';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
+class CameraFrameSample {
+  const CameraFrameSample({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    required this.bytesPerRow,
+    required this.timestampMicros,
+  });
+
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final int bytesPerRow;
+  final int timestampMicros;
+}
+
 class CameraFeed extends StatefulWidget {
-  const CameraFeed({super.key});
+  const CameraFeed({
+    super.key,
+    this.onFrame,
+  });
+
+  final ValueChanged<CameraFrameSample>? onFrame;
 
   @override
   State<CameraFeed> createState() => _CameraFeedState();
 }
 
 class _CameraFeedState extends State<CameraFeed> {
+  static const _frameInterval = Duration(milliseconds: 250);
+
   CameraController? _controller;
   String? _error;
+  DateTime? _lastFrameSentAt;
 
   @override
   void initState() {
@@ -24,6 +50,14 @@ class _CameraFeedState extends State<CameraFeed> {
   void dispose() {
     _controller?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CameraFeed oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.onFrame != widget.onFrame) {
+      _syncImageStream();
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -51,11 +85,58 @@ class _CameraFeedState extends State<CameraFeed> {
       }
 
       setState(() => _controller = controller);
+      await _syncImageStream();
     } catch (error) {
       if (mounted) {
         setState(() => _error = 'Camera permission needed');
       }
     }
+  }
+
+  Future<void> _syncImageStream() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final shouldStream = widget.onFrame != null;
+    final isStreaming = controller.value.isStreamingImages;
+
+    if (shouldStream && !isStreaming) {
+      try {
+        await controller.startImageStream(_handleCameraImage);
+      } catch (_) {
+        if (mounted) {
+          setState(() => _error = 'Camera stream unavailable');
+        }
+      }
+    } else if (!shouldStream && isStreaming) {
+      await controller.stopImageStream();
+      _lastFrameSentAt = null;
+    }
+  }
+
+  void _handleCameraImage(CameraImage image) {
+    final onFrame = widget.onFrame;
+    if (onFrame == null || image.planes.isEmpty) return;
+    if (image.format.group != ImageFormatGroup.bgra8888) return;
+
+    final now = DateTime.now();
+    final lastFrameSentAt = _lastFrameSentAt;
+    if (lastFrameSentAt != null &&
+        now.difference(lastFrameSentAt) < _frameInterval) {
+      return;
+    }
+
+    _lastFrameSentAt = now;
+    final plane = image.planes.first;
+    onFrame(
+      CameraFrameSample(
+        bytes: Uint8List.fromList(plane.bytes),
+        width: image.width,
+        height: image.height,
+        bytesPerRow: plane.bytesPerRow,
+        timestampMicros: now.microsecondsSinceEpoch,
+      ),
+    );
   }
 
   @override

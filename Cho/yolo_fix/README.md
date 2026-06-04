@@ -1,7 +1,22 @@
 # yolo_fix
 
-This folder is a drop-in test UI bundle for `Cho/final/ios/RealtimeDetectionMVP`.
-It does not edit the original app directly.
+This folder contains the standalone `yolo_fix` iOS app and the drop-in test UI files for `Cho/final/ios/RealtimeDetectionMVP`.
+
+The current app is back on the original non-ReLU pretrained path:
+
+```text
+weights source: yolo26n.pt
+dataset/classes: COCO 80-class
+displayed class: person
+activation override: none
+input: [1, 3, 576, 1024]
+backend: ExecuTorch CoreML delegate
+CoreML compute unit: all
+target: iOS18
+precision: float16
+```
+
+`detector.pte` is generated locally and ignored by git. The tracked `metadata.yaml` documents the current export contract.
 
 ## What This Adds
 
@@ -63,31 +78,47 @@ test_3.jpg
 The `Test Image` screen also checks for `test_1.jpg` through `test_3.jpg` at the bundle root.
 If a file is missing, the app shows `test_1.jpg missing` instead of crashing.
 
-## Model Input Size
+## Export The Current Model
 
-The default configuration is the current model contract:
+Run this from the repo root with the `study` environment:
 
-```swift
-DetectorPipeline(configuration: .current640)
+```sh
+conda run -n study python Cho/yolo_fix/tools/export_yolo_executorch.py \
+  --weights yolo26n.pt \
+  --imgsz 1024 576 \
+  --activation original \
+  --coreml-compute-unit all \
+  --coreml-target iOS18 \
+  --coreml-precision float16
 ```
 
-That means:
+The script writes:
 
 ```text
-input: [1, 3, 640, 640]
+Cho/yolo_fix/yolo_fix/yolo_fix/detector.pte
+Cho/yolo_fix/yolo_fix/yolo_fix/metadata.yaml
 ```
 
-For a re-exported 16:9 model, switch both `StillDetectionViewController` and
-`LiveDetectionViewController` to:
+## Model Input Size
+
+The app view controllers currently use the 16:9 model contract:
 
 ```swift
 DetectorPipeline(configuration: .highResolution1024x576)
 ```
 
-Then bundle a `detector.pte` exported for:
+That means:
 
 ```text
 input: [1, 3, 576, 1024]
+```
+
+The postprocessor expects the raw pretrained COCO output shape and filters person only:
+
+```swift
+classNames: ["person"]
+rawModelClassCount: 80
+sourceClassMap: [0: 0]
 ```
 
 ## Letterbox Behavior

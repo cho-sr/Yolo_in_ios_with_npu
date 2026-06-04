@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import sys
+import sysconfig
 from pathlib import Path
 
 
@@ -69,9 +70,11 @@ def configure_environment(project_root: Path) -> None:
 
     candidate_paths = [
         Path(sys.executable).with_name("flatc"),
-        project_root / ".venv/bin/flatc",
-        project_root / ".venv/lib/python3.12/site-packages/executorch/data/bin/flatc",
     ]
+    for key in ("purelib", "platlib"):
+        site_packages = sysconfig.get_paths().get(key)
+        if site_packages:
+            candidate_paths.append(Path(site_packages) / "executorch/data/bin/flatc")
 
     for candidate in candidate_paths:
         if candidate.exists() and os.access(candidate, os.X_OK):

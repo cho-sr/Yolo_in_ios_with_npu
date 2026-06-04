@@ -131,7 +131,7 @@ def train(args: argparse.Namespace) -> None:
     print(f"last weights: {save_dir / 'weights' / 'last.pt'}")
     print("Next on Mac:")
     print(
-        ".venv/bin/python Cho/yolo_fix/tools/export_yolo_executorch.py "
+        "python Cho/yolo_fix/tools/export_yolo_executorch.py "
         f"--weights {save_dir / 'weights' / 'best.pt'} "
         "--imgsz 1024 576 --activation relu "
         "--coreml-compute-unit all --coreml-target iOS18 --coreml-precision float16"

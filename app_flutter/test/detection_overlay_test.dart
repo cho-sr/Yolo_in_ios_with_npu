@@ -20,7 +20,7 @@ void main() {
     );
 
     final overlayFinder = find.byType(DetectionOverlay);
-    final labelFinder = find.text('Player ID #7 Locked');
+    final labelFinder = find.text('Player ID #7 92% Locked');
 
     expect(overlayFinder, findsOneWidget);
     expect(labelFinder, findsOneWidget);

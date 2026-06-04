@@ -10,11 +10,15 @@ class CameraScreen extends StatelessWidget {
   const CameraScreen({
     super.key,
     required this.onStartTracking,
+    required this.onCameraFrame,
+    required this.trackingActive,
     required this.trackingBusy,
     required this.detectorStatus,
   });
 
   final VoidCallback onStartTracking;
+  final ValueChanged<CameraFrameSample> onCameraFrame;
+  final bool trackingActive;
   final bool trackingBusy;
   final DetectorStatus detectorStatus;
 
@@ -46,8 +50,10 @@ class CameraScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Stack(
                   children: [
-                    const Positioned.fill(
-                      child: CameraFeed(),
+                    Positioned.fill(
+                      child: CameraFeed(
+                        onFrame: trackingActive ? onCameraFrame : null,
+                      ),
                     ),
                     Positioned.fill(
                       child: DecoratedBox(
@@ -58,12 +64,21 @@ class CameraScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Positioned.fill(child: DetectionOverlay()),
-                    const Positioned(
+                    Positioned.fill(
+                      child: DetectionOverlay(
+                        detections: detectorStatus.detections,
+                        showFallback: false,
+                      ),
+                    ),
+                    Positioned(
                       left: 14,
                       top: 14,
                       child: StatusChip(
-                        label: 'Camera Feed Online',
+                        label: detectorStatus.hasDetections
+                            ? 'Bounding Boxes Online'
+                            : trackingActive
+                                ? 'Detecting'
+                                : 'Camera Feed Online',
                         color: AppColors.green,
                         showDot: true,
                       ),

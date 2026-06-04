@@ -14,6 +14,8 @@ void main() {
         theme: buildPocketCoachTheme(),
         home: CameraScreen(
           onStartTracking: () {},
+          onCameraFrame: (_) {},
+          trackingActive: false,
           trackingBusy: false,
           detectorStatus: DetectorStatus.unavailable(),
         ),
@@ -21,7 +23,7 @@ void main() {
     );
 
     expect(find.byType(DetectionOverlay), findsOneWidget);
-    expect(find.text('Player ID #7 Locked'), findsOneWidget);
+    expect(find.text('Player ID #7 92% Locked'), findsNothing);
   });
 
   testWidgets('Live tracking screen includes detection overlay',
@@ -34,6 +36,6 @@ void main() {
     );
 
     expect(find.byType(DetectionOverlay), findsOneWidget);
-    expect(find.text('Player ID #7 Locked'), findsOneWidget);
+    expect(find.text('Player ID #7 92% Locked'), findsNothing);
   });
 }

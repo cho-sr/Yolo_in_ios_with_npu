@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../detection/detector_bridge.dart';
 import '../theme/app_theme.dart';
 
 class DetectionOverlay extends StatelessWidget {
-  const DetectionOverlay({super.key});
+  const DetectionOverlay({
+    super.key,
+    this.detections = const [],
+    this.showFallback = true,
+  });
+
+  final List<DetectionBoxData> detections;
+  final bool showFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -11,49 +19,84 @@ class DetectionOverlay extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
+        final boxes = detections.isNotEmpty
+            ? detections
+            : showFallback
+                ? _fallbackDetections
+                : const <DetectionBoxData>[];
+
         return Stack(
           children: [
-            _DetectionBox(
-              left: width * 0.49,
-              top: height * 0.39,
-              width: width * 0.25,
-              height: height * 0.19,
-              label: 'Player ID #7 Locked',
-              color: AppColors.accent,
-              solid: true,
-            ),
-            _DetectionBox(
-              left: width * 0.23,
-              top: height * 0.37,
-              width: width * 0.16,
-              height: height * 0.15,
-              color: Colors.white70,
-            ),
-            _DetectionBox(
-              left: width * 0.77,
-              top: height * 0.36,
-              width: width * 0.17,
-              height: height * 0.13,
-              color: Colors.white70,
-            ),
-            _DetectionBox(
-              left: width * 0.20,
-              top: height * 0.51,
-              width: width * 0.18,
-              height: height * 0.17,
-              color: Colors.white70,
-            ),
-            Positioned(
-              left: width * 0.50,
-              top: height * 0.47,
-              child: const _Crosshair(),
-            ),
+            for (final detection in boxes)
+              _DetectionBox(
+                left: width * detection.x,
+                top: height * detection.y,
+                width: width * detection.width,
+                height: height * detection.height,
+                label: _labelFor(detection),
+                color: detection.locked ? AppColors.accent : Colors.white70,
+                solid: detection.locked,
+              ),
+            if (boxes.isNotEmpty)
+              Positioned(
+                left: width * (boxes.first.x + boxes.first.width / 2) - 14,
+                top: height * (boxes.first.y + boxes.first.height / 2) - 14,
+                child: const _Crosshair(),
+              ),
           ],
         );
       },
     );
   }
+
+  String _labelFor(DetectionBoxData detection) {
+    final confidence = (detection.confidence * 100).round();
+    if (detection.locked) {
+      return '${detection.label} $confidence% Locked';
+    }
+    return '${detection.label} $confidence%';
+  }
 }
+
+const _fallbackDetections = [
+  DetectionBoxData(
+    x: 0.49,
+    y: 0.39,
+    width: 0.25,
+    height: 0.19,
+    label: 'Player ID #7',
+    confidence: 0.92,
+    classId: 0,
+    locked: true,
+  ),
+  DetectionBoxData(
+    x: 0.23,
+    y: 0.37,
+    width: 0.16,
+    height: 0.15,
+    label: 'person',
+    confidence: 0.81,
+    classId: 0,
+  ),
+  DetectionBoxData(
+    x: 0.77,
+    y: 0.36,
+    width: 0.17,
+    height: 0.13,
+    label: 'person',
+    confidence: 0.76,
+    classId: 0,
+  ),
+  DetectionBoxData(
+    x: 0.20,
+    y: 0.51,
+    width: 0.18,
+    height: 0.17,
+    label: 'person',
+    confidence: 0.79,
+    classId: 0,
+  ),
+];
 
 class _DetectionBox extends StatelessWidget {
   const _DetectionBox({
